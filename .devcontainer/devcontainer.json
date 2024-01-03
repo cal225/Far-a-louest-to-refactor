@@ -1,6 +1,12 @@
 {
 	"name": "Bun",
-	"image": "ghcr.io/nhaef/devcontainer-bun:latest",
+	"build": {
+        "dockerfile": "Dockerfile",
+        // Update 'VARIANT' to pick a Bun version.
+        "args": {
+            "VARIANT": "latest"
+        }
+    },
 	"customizations": {
 		"vscode": {
 			"extensions": ["dbaeumer.vscode-eslint"]
