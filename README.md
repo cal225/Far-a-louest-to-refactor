@@ -14,6 +14,8 @@ npm run start
 
 ### Before starting the project
 
+**If there is a dev.db in the prisma folder, please delete before going further**
+
 Create an .env file with corresponding content (we use SQLite for simplicity) : 
 ```env
 DATABASE_URL=file:dev.db

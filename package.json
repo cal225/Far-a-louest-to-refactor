@@ -9,6 +9,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
+    "@biomejs/biome": "1.9.4",
     "bun-types": "latest"
   },
   "peerDependencies": {
