@@ -3,7 +3,7 @@
   "module": "src/index.ts",
   "type": "module",
   "scripts": {
-    "start": "tsx watch src/index.ts"
+    "start": "tsx src/index.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
