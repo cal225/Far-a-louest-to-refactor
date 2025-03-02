@@ -3,10 +3,10 @@
   "module": "src/index.ts",
   "type": "module",
   "scripts": {
-    "start": "bun src/index.ts"
+    "start": "tsx watch src/index.ts"
   },
   "prisma": {
-    "seed": "bun prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
     "bun-types": "latest"
@@ -22,6 +22,7 @@
     "chalk": "^5.3.0",
     "cli-spinner": "^0.2.10",
     "nanoid": "^5.0.4",
-    "prisma": "^5.7.1"
+    "prisma": "^5.7.1",
+    "tsx": "^4.7.1"
   }
 }

@@ -1,23 +1,29 @@
 # Project Adventures
 
-Wa are using bun for this project a NodeJs runner, please download and install it : https://bun.sh/
-
 To install dependencies:
 
 ```bash
-bun install
+npm install
 ```
 
 To run:
 
 ```bash
-bun start
+npm run start
 ```
 
-Create database and seed it :
+### Before starting the project
 
+Create an .env file with corresponding content (we use SQLite for simplicity) : 
+```env
+DATABASE_URL=file:dev.db
+```
+
+Run migration scripts
 ```bash
-bun prisma migrate dev
+npx prisma migrate deploy 
 ```
-
-This project was created using `bun init` in bun v1.0.19. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+Run seed scripts
+```bash
+npx prisma db seed
+```
