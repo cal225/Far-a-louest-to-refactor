@@ -1,285 +1,120 @@
-import { input, confirm, select } from '@inquirer/prompts';
-import chalk, { ChalkInstance } from 'chalk';
-import { Player, Prisma, PrismaClient } from '@prisma/client';
-import { customAlphabet } from 'nanoid';
-
-const nanoid = customAlphabet('1234567890ABDCEFGHIJKLMNOPQRSTUVWXYZ', 5);
-
-const prisma = new PrismaClient();
+import { input, confirm, select } from "@inquirer/prompts";
+import { ChalkInstance } from "chalk";
+import { Prisma, PrismaClient } from "@prisma/client";
+import Narator from "./presentation/Narator";
+import { SessionRepository } from "./repository/SessionRepository";
+import type { PlayerDTO, SessionDTO, SceneDTO } from "./tdo/DataObjects";
+import { IdGeneratorService } from "./services/IdGeneratorService";
 
 export const enum actionsTypes {
-  msg = 'msg',
-  room = 'room',
-  action = 'action',
-  sq = 'quit',
+  msg = "msg",
+  room = "room",
+  action = "action",
+  sq = "quit",
 }
 
 export enum dialogType {
-  self = 'self',
-  pnj = 'pnj',
-  narrator = 'narrator',
+  self = "self",
+  pnj = "pnj",
+  narrator = "narrator",
 }
-
-class Narator {
-  private static readingSpeed: number = 20;
-  static async speak(text: string) {
-    await typeWriterEffect(text, this.readingSpeed, chalk.magenta);
-  }
-
-  static async dialog(text: string, type: keyof typeof dialogType) {
-    switch (type) {
-      case dialogType.narrator: {
-        await this.speak(text);
-        break;
-      }
-      case dialogType.pnj: {
-        await typeWriterEffect(text, this.readingSpeed, chalk.green);
-        break;
-      }
-      case dialogType.self: {
-        await typeWriterEffect(text, this.readingSpeed, chalk.yellow);
-        break;
-      }
-      default: {
-        throw new Error('Unknown dialog type');
-      }
-    }
-  }
-}
+const prisma = new PrismaClient();
+const sessionRepository = new SessionRepository(
+  prisma,
+  new IdGeneratorService()
+);
 
 class GameInfo {
-  private player?: Player;
-  private session?: CompleteSession;
-  private end: boolean = false;
-  private nextElementScript?: CompleteScene;
+  private player?: PlayerDTO;
+  private session?: SessionDTO;
+  private end = false;
+  private nextElementScript?: CompleteScene | SceneDTO;
 
   async init() {
-    {
-      await Narator.speak("Bienvenue dans l'aventure jeune aventurier !");
-      await Narator.speak(
-        "Avant de commencer j'aurais besoin de de quelques informations..."
-      );
+    await Narator.speak("Bienvenue dans l'aventure jeune aventurier !");
+    await Narator.speak(
+      "Avant de commencer, j'aurais besoin de quelques informations..."
+    );
 
-      const answer = await input(
-        { message: 'Entrez votre nom' },
-        {
-          clearPromptOnDone: true,
-        }
-      );
-      console.clear();
+    const playerName = await input({ message: "Entrez votre nom" });
+    console.clear();
 
-      const user = await prisma.player.findFirst({
-        where: {
-          name: answer,
-        },
+    let user = await prisma.player.findFirst({ where: { name: playerName } });
+
+    if (!user) {
+      user = await prisma.player.create({ data: { name: playerName } });
+      this.session = await sessionRepository.create(user);
+      this.setPlayer(user);
+    } else {
+      this.setPlayer(user);
+      const continuePrevious = await confirm({
+        message:
+          "Une session existe déjà pour vous, voulez-vous continuer la précédente ?",
       });
-      if (!user) {
-        const user = await prisma.player.create({
-          data: {
-            name: answer,
-            Session: {
-              create: {
-                sessionKey: nanoid(),
-              },
-            },
-          },
-        });
-        const session = await prisma.session.findFirst({
-          where: {
-            player: {
-              id: user.id,
-            },
-          },
-          orderBy: {
-            date: 'desc',
-          },
-          include: {
-            scene: {
-              include: {
-                dialogs: true,
-                actions: {
-                  include: {
-                    link: true,
-                  },
-                },
-              },
-            },
-          },
-        });
-
-        if (session) {
-          await this.setSession(session);
-        }
-
-        this.setPlayer(user);
-
-        await Narator.speak(`Ah heureux de vous rencontrer ${answer}!`);
-        await Narator.speak(
-          `Une grande aventure nous attend, j'espère que vous êtes prêts.`
-        );
+      if (continuePrevious) {
+        this.session =
+          (await sessionRepository.findLatestWithSceneByPlayer(user)) ?? undefined;
       } else {
-        await Narator.speak(`Hum... il semblerait que votre tête me soit familière... !`);
-        const answer = await confirm(
-          {
-            message:
-              'Une session existe déjà pour vous, voulez vous continuer la précédente ?',
-          },
-          {
-            clearPromptOnDone: true,
-          }
-        );
-
-        this.setPlayer(user);
-
-        if (answer) {
-          await Narator.speak('Très bien continuons cette aventure dans ce cas !');
-          const session = await prisma.session.findFirst({
-            where: {
-              playerId: user.id,
-            },
-          });
-          if (!session) {
-            await prisma.session.create({
-              data: {
-                player: {
-                  connect: {
-                    id: user.id,
-                  },
-                },
-                sessionKey: nanoid(),
-              },
-            });
-          }
-
-          const lastSession = await prisma.session.findFirst({
-            where: {
-              player: {
-                id: user.id,
-              },
-            },
-            orderBy: {
-              date: 'desc',
-            },
-            include: {
-              scene: {
-                include: {
-                  dialogs: true,
-                  actions: {
-                    include: {
-                      link: true,
-                    },
-                  },
-                },
-              },
-            },
-          });
-          if (lastSession) {
-            await this.setSession(lastSession);
-            if (lastSession.scene) this.nextElementScript = lastSession.scene;
-          }
-        } else {
-          await Narator.speak(
-            "Repartons alors de zero... allez savoir ce qu'il va advenir de vous cette fois !"
-          );
-          const session = await prisma.session.create({
-            data: {
-              player: {
-                connect: {
-                  id: user.id,
-                },
-              },
-              sessionKey: nanoid(),
-            },
-            include: {
-              scene: {
-                include: {
-                  dialogs: true,
-                  actions: {
-                    include: {
-                      link: true,
-                    },
-                  },
-                },
-              },
-            },
-          });
-
-          await this.setSession(session);
-        }
+        this.session = await sessionRepository.create(user);
       }
-
-      //spinner.stop();
-      //console.clear();
     }
+
+    if (this.session?.scene) {
+      this.nextElementScript = this.session.scene;
+    } else {
+      await this.setDefaultScene();
+    }
+
+    await Narator.speak(`Ah, heureux de vous rencontrer ${playerName} !`);
   }
 
-  async setSession(session: CompleteSession) {
-    this.session = session;
+  async setNextElementScript(sceneId: string) {
+    if (sceneId === actionsTypes.sq) {
+      return this.setEnd();
+    }
 
-    if (session.scene) {
-      this.nextElementScript = session.scene;
-    } else await this.setDefaultScene();
+    if (!this.session) throw new Error("No session found");
+
+    await sessionRepository.update(this.session, { sceneId });
+
+    // Find the scene and handle potential null return
+    const scene = await prisma.scene.findUnique({
+      where: { id: sceneId },
+      include: {
+        dialogs: true,
+        actions: { include: { link: true } },
+      },
+    });
+
+    // If no scene is found, set nextElementScript to undefined
+    if (!scene) {
+      this.nextElementScript = undefined;
+      throw new Error("No scene found");
+    }
+
+    // Ensure the scene is assigned correctly
+    this.nextElementScript = scene; // Type assertion since we know it's not null here
   }
+  
 
   private async setDefaultScene() {
     const defaultScene = await prisma.scene.findUnique({
-      where: {
-        id: 'default',
-      },
+      where: { id: "default" },
       include: {
         dialogs: true,
         actions: {
-          include: {
-            link: true,
-          },
+          include: { link: true },
         },
       },
     });
 
     if (!defaultScene)
-      throw new Error('No default scene found, have you ran the seed script ?');
+      throw new Error("No default scene found, have you ran the seed script ?");
     this.nextElementScript = defaultScene;
   }
 
-  setPlayer(player: Player) {
+  setPlayer(player: PlayerDTO) {
     this.player = player;
-  }
-
-  async setNextElementScript(nextElementScript: string) {
-    if (nextElementScript === actionsTypes.sq) {
-      return this.setEnd();
-    }
-
-    if (!this.session) throw new Error('No session found');
-    const scene = await prisma.scene.findUnique({
-      where: {
-        id: nextElementScript,
-      },
-      include: {
-        dialogs: true,
-        actions: {
-          include: {
-            link: true,
-          },
-        },
-      },
-    });
-
-    if (!scene) throw new Error('No scene found');
-
-    await prisma.session.update({
-      where: {
-        id: this.session.id,
-      },
-      data: {
-        scene: {
-          connect: {
-            id: scene.id,
-          },
-        },
-      },
-    });
-    this.nextElementScript = scene;
   }
 
   getSession() {
@@ -302,7 +137,6 @@ class GameInfo {
     return this.end;
   }
 }
-
 async function turn({ gameInfo }: { gameInfo: GameInfo }) {
   console.clear();
   const scene = gameInfo.getNextScript();
@@ -331,12 +165,14 @@ async function turn({ gameInfo }: { gameInfo: GameInfo }) {
   return;
 }
 
+
 async function main() {
   try {
     console.clear();
     const gameInfo = new GameInfo();
     await gameInfo.init();
     while (!gameInfo.hasEnded()) {
+      console.log(gameInfo.hasEnded());
       await turn({ gameInfo });
     }
   } catch (error) {
@@ -374,12 +210,13 @@ type CompleteSession = Prisma.SessionGetPayload<{
   };
 }>;
 
-
-
-
-
-async function typeWriterEffect(text: string, speed: number, decorator: ChalkInstance) {
-  const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+async function typeWriterEffect(
+  text: string,
+  speed: number,
+  decorator: ChalkInstance
+) {
+  const delay = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
   for (const char of text) {
     process.stdout.write(decorator(char));

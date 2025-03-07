@@ -8,30 +8,22 @@ class Narator {
   }
 
   static async dialog(text: string, type: "narrator" | "pnj" | "self") {
-    const colors: Record<string, ChalkInstance> = {
+    const colors = {
       narrator: chalk.magenta,
       pnj: chalk.green,
       self: chalk.yellow,
     };
 
-    if (!colors[type]) throw new Error("Unknown dialog type");
-
     await typeWriterEffect(text, this.readingSpeed, colors[type]);
   }
 }
 
-async function typeWriterEffect(
-  text: string,
-  speed: number,
-  decorator: ChalkInstance
-) {
-  const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
+async function typeWriterEffect(text: string, speed: number, decorator: ChalkInstance) {
   for (const char of text) {
     process.stdout.write(decorator(char));
-    await delay(speed);
+    await new Promise((resolve) => setTimeout(resolve, speed));
   }
-  process.stdout.write("\n"); // Ensures new line after typing
+  console.log();
 }
 
 export default Narator;

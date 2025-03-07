@@ -51,7 +51,7 @@ const dataStructure: RoundHolder = {
 			{
 				speaker: dialogType.narrator,
 				content:
-					"Et c'est ainsi que se termine notre première partie de l'histoire. Je n'ai pas eu le teps de faire plus, c'est déjà bien assez.",
+					"Et c'est ainsi que se termine notre première partie de l'histoire. Je n'ai pas eu le temps de faire plus, c'est déjà bien assez.",
 			},
 		],
 		actions: [
