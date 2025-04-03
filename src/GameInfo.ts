@@ -5,26 +5,7 @@ import { IdGeneratorService } from "./services/IdGeneratorService";
 import { SceneRepository, SessionRepository } from "./barel/RepositoryControl";
 import Narator from "./presentation/Narator";
 
-export const enum actionsTypes {
-  msg = "msg",
-  room = "room",
-  action = "action",
-  sq = "quit",
-}
-
-export enum dialogType {
-  self = "self",
-  pnj = "pnj",
-  narrator = "narrator",
-}
-const prisma = new PrismaClient();
-const sceneRepository = new SceneRepository(prisma);
-const sessionRepository = new SessionRepository(
-  prisma,
-  new IdGeneratorService()
-);
-
-class GameInfo {
+export defeault class GameInfo {
   private player?: PlayerDTO;
   private session?: SessionDTO;
   private end = false;
@@ -143,47 +124,3 @@ async function turn({ gameInfo }: { gameInfo: GameInfo }) {
   await gameInfo.setNextElementScript(answer);
   return;
 }
-
-async function main() {
-  try {
-    console.clear();
-    const gameInfo = new GameInfo();
-    await gameInfo.init();
-    while (!gameInfo.hasEnded()) {
-      console.log(gameInfo.hasEnded());
-      await turn({ gameInfo });
-    }
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-await main();
-
-// J'ai besoin de définir une structure qui me permet de gérer un tour et de récupérer le prochain tour
-
-type CompleteScene = Prisma.SceneGetPayload<{
-  include: {
-    dialogs: true;
-    actions: {
-      include: {
-        link: true;
-      };
-    };
-  };
-}>;
-
-type CompleteSession = Prisma.SessionGetPayload<{
-  include: {
-    scene: {
-      include: {
-        dialogs: true;
-        actions: {
-          include: {
-            link: true;
-          };
-        };
-      };
-    };
-  };
-}>;

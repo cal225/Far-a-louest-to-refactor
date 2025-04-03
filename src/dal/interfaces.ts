@@ -1,4 +1,4 @@
-import type { SessionDTO, PlayerDTO } from "../tdo/DataObjects";
+import type { SessionDTO, PlayerDTO, SceneDTO } from "../dto/DataObjects";
 
 export interface ISessionRepository {
   // Finds the latest session for a player, or null if no session exists
@@ -12,4 +12,11 @@ export interface ISessionRepository {
 
   // Updates an existing session with the provided data
   update(session: SessionDTO, data: Partial<SessionDTO>): Promise<void>;
+}
+export interface ISceneRepository {
+  // Finds a scene by ID, including its dialogs and actions
+  findById(sceneId: string): Promise<SceneDTO | null>;
+
+  // Fetches the default scene
+  findDefault(): Promise<SceneDTO>;
 }
